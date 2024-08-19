@@ -1,0 +1,143 @@
+---
+title: "Day 6 EOD"
+author: "Liz Peterson"
+format: html
+editor_options: 
+  chunk_output_type: console
+warning: FALSE
+message: FALSE
+---
+# End of day activity 8/19/24
+## Load packages
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+```
+
+## Read in and tidy data
+```{r}
+lobsters <- read_csv(here("data","Lobster_Abundance_All_Years_20210412.csv"), na = c("-99999", "")) %>% 
+  clean_names() %>% # convert to lower snake case
+  uncount(count) # got rid of the count column
+```
+
+## Find counts and mean sizes by site & year
+```{r}
+summary_table <- lobsters %>%
+  group_by(site, year) %>% 
+  summarize(mean_carapace_length = mean(size_mm, na.rm=TRUE), 
+            count = n()) # creates a new count column
+```
+
+```{r}
+ggplot(summary_table, aes(x = year, y = count, color = site)) +
+  geom_point() +
+  labs(title = "Total Lobsters Observed by Site", x = "Year", y = "Count") +
+  theme_classic()
+```
+
+## Find the proportion of legal lobsters at each site for 2020
+```{r}
+lobsters_2020 <- lobsters %>%
+  filter(year == "2020") %>% # create subset with only data from 2020
+  mutate(legal = case_when(size_mm >= 79.76 ~ "yes", 
+                           size_mm < 79.76 ~ "no")) %>% # added new column determining if its of legal length
+  group_by(site, legal) %>%
+  summarize(count = n())
+```
+
+```{r}
+ggplot(lobsters_2020, aes(x = site, y = count, fill = legal)) +
+  geom_col(position = "fill") +
+  labs(title = "Proportion of Legal/Non-Legal Lobsters at Each Site",
+       x = "Site",
+       y = "Proportion of Lobsters")
+```
+
+From this visualization, we see that NAPL and IVEE have the highest proportion of legal lobsters. These locations are in protected waters, meaning the lobsters could have more freedom to grow without the threat of fishing.
+
+## Random lobster wrangling
+## filter() practice
+```{r}
+
+# Create and store a subset that only contains lobsters from sites “IVEE”, “CARP” and “NAPL”. Check your output data
+# frame to ensure that only those three sites exist.
+
+ex_a <- lobsters %>%
+  filter(site %in% c("IVEE", "CARP", "NAPL"))
+
+# Create a subset that only contains lobsters observed in August.
+
+ex_b <- lobsters %>%
+  filter(month == 8)
+
+# Create a subset with lobsters at Arroyo Quemado (AQUE) OR with a carapace length greater than 70 mm.
+
+ex_c <- lobsters %>%
+  filter(site == "AQUE" | size_mm > 70)
+
+# Create a subset that does NOT include observations from Naples Reef (NAPL)
+
+ex_d <- lobsters %>%
+  filter(site != "NAPL")
+```
+
+## group_by() %>% summarize() practice
+```{r}
+
+# Find the mean and standard deviation of lobster carapace length, grouped by site.
+
+ex_e <- lobsters %>%
+  group_by(site) %>%
+  summarize(mean_lob_length = mean(size_mm, na.rm=TRUE),
+            sd_lob_length = sd(size_mm, na.rm=TRUE))
+
+# Find the maximum carapace length by site and month.
+
+ex_f <- lobsters %>%
+  group_by(site, month) %>%
+  summarize(max_lob_length = max(size_mm, na.rm=TRUE))
+```
+
+## mutate() practice
+```{r}
+
+# Add a new column that contains lobster carapace length converted to centimeters. Check output.
+
+ex_g <- lobsters %>%
+  mutate(size_cm = size_mm/10)
+view(ex_g)
+
+# Update the site column to all lowercase. Check output.
+
+ex_h <- lobsters %>%
+  mutate(site = tolower(site))
+view(ex_h)
+
+# Convert the area column to a character (not sure why you’d want to do this, but try it anyway). Check output.
+
+ex_i <- lobsters %>%
+  mutate(area = as.character(area))
+view(ex_i)
+```
+
+## case_when() practice
+```{r}
+
+# Use case_when() to add a new column called size_bin that contains “small” if carapace size is <= 70 mm, or “large”
+# if it is greater than 70 mm. Check output.
+
+ex_j <- lobsters %>%
+  mutate(size_bin = case_when(size_mm <= 70 ~ "small", 
+                           size_mm > 70 ~ "large"))
+view(ex_j)
+
+# Use case_when() to add a new column called designation that contains “MPA” if the site is “IVEE” or “NAPL”, and
+# “not MPA” for all other outcomes.
+
+ex_k <- lobsters %>%
+  mutate(designation = case_when(site %in% c("IVEE", "NAPL") ~ "MPA",
+                                 .default = "not MPA"))
+```
+
